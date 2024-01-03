@@ -14,24 +14,21 @@
   "item_name",
   "image",
   "bom_no",
+  "sales_order",
   "column_break1",
   "company",
   "qty",
   "material_transferred_for_manufacturing",
   "produced_qty",
   "process_loss_qty",
-  "sales_order",
   "project",
-  "serial_no_and_batch_for_finished_good_section",
-  "has_serial_no",
-  "has_batch_no",
-  "column_break_17",
-  "serial_no",
-  "batch_size",
+  "section_break_ndpq",
+  "required_items",
+  "work_order_configuration",
   "settings_section",
   "allow_alternative_item",
   "use_multi_level_bom",
-  "column_break_18",
+  "column_break_17",
   "skip_transfer",
   "from_wip_warehouse",
   "update_consumed_material_cost_in_project",
@@ -41,8 +38,16 @@
   "column_break_12",
   "fg_warehouse",
   "scrap_warehouse",
+  "serial_no_and_batch_for_finished_good_section",
+  "has_serial_no",
+  "has_batch_no",
+  "column_break_18",
+  "batch_size",
   "required_items_section",
-  "required_items",
+  "materials_and_operations_tab",
+  "operations_section",
+  "transfer_material_against",
+  "operations",
   "time",
   "planned_start_date",
   "planned_end_date",
@@ -51,9 +56,6 @@
   "actual_start_date",
   "actual_end_date",
   "lead_time",
-  "operations_section",
-  "transfer_material_against",
-  "operations",
   "section_break_22",
   "planned_operating_cost",
   "actual_operating_cost",
@@ -72,12 +74,14 @@
   "production_plan_item",
   "production_plan_sub_assembly_item",
   "product_bundle_item",
-  "amended_from"
+  "amended_from",
+  "connections_tab"
  ],
  "fields": [
   {
    "fieldname": "item",
-   "fieldtype": "Section Break",
+   "fieldtype": "Tab Break",
+   "label": "Production Item",
    "options": "fa fa-gift"
   },
   {
@@ -99,7 +103,7 @@
    "no_copy": 1,
    "oldfieldname": "status",
    "oldfieldtype": "Select",
-   "options": "\nDraft\nSubmitted\nNot Started\nIn Process\nCompleted\nStopped\nCancelled",
+   "options": "\nDraft\nSubmitted\nNot Started\nIn Process\nCompleted\nStopped\nClosed\nCancelled",
    "read_only": 1,
    "reqd": 1,
    "search_index": 1
@@ -236,7 +240,7 @@
   {
    "fieldname": "warehouses",
    "fieldtype": "Section Break",
-   "label": "Warehouses",
+   "label": "Warehouse",
    "options": "fa fa-building"
   },
   {
@@ -332,8 +336,9 @@
    "options": "fa fa-wrench"
   },
   {
-   "default": "Work Order",
    "depends_on": "operations",
+   "fetch_from": "bom_no.transfer_material_against",
+   "fetch_if_empty": 1,
    "fieldname": "transfer_material_against",
    "fieldtype": "Select",
    "label": "Transfer Material Against",
@@ -388,8 +393,8 @@
   {
    "collapsible": 1,
    "fieldname": "more_info",
-   "fieldtype": "Section Break",
-   "label": "More Information",
+   "fieldtype": "Tab Break",
+   "label": "More Info",
    "options": "fa fa-file-text"
   },
   {
@@ -399,6 +404,8 @@
    "read_only": 1
   },
   {
+   "fetch_from": "production_item.stock_uom",
+   "fetch_if_empty": 1,
    "fieldname": "stock_uom",
    "fieldtype": "Link",
    "label": "Stock UOM",
@@ -472,8 +479,7 @@
   },
   {
    "fieldname": "settings_section",
-   "fieldtype": "Section Break",
-   "label": "Settings"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "column_break_18",
@@ -527,13 +533,6 @@
    "read_only": 1
   },
   {
-   "depends_on": "has_serial_no",
-   "fieldname": "serial_no",
-   "fieldtype": "Small Text",
-   "label": "Serial Nos",
-   "no_copy": 1
-  },
-  {
    "default": "0",
    "depends_on": "has_batch_no",
    "fieldname": "batch_size",
@@ -566,6 +565,26 @@
    "no_copy": 1,
    "non_negative": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections",
+   "show_dashboard": 1
+  },
+  {
+   "fieldname": "work_order_configuration",
+   "fieldtype": "Tab Break",
+   "label": "Configuration"
+  },
+  {
+   "fieldname": "materials_and_operations_tab",
+   "fieldtype": "Tab Break",
+   "label": "Operations"
+  },
+  {
+   "fieldname": "section_break_ndpq",
+   "fieldtype": "Section Break"
   }
  ],
  "icon": "fa fa-cogs",
@@ -573,7 +592,7 @@
  "image_field": "image",
  "is_submittable": 1,
  "links": [],
- "modified": "2021-10-27 19:21:35.139888",
+ "modified": "2023-08-11 18:35:49.852069",
  "modified_by": "Administrator",
  "module": "Manufacturing",
  "name": "Work Order",
@@ -593,7 +612,6 @@
    "read": 1,
    "report": 1,
    "role": "Manufacturing User",
-   "set_user_permissions": 1,
    "share": 1,
    "submit": 1,
    "write": 1
@@ -606,6 +624,7 @@
  ],
  "sort_field": "modified",
  "sort_order": "ASC",
+ "states": [],
  "title_field": "production_item",
  "track_changes": 1,
  "track_seen": 1

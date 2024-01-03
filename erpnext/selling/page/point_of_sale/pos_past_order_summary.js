@@ -17,16 +17,16 @@ erpnext.PointOfSale.PastOrderSummary = class {
 		this.wrapper.append(
 			`<section class="past-order-summary">
 				<div class="no-summary-placeholder">
-					Select an invoice to load summary data
+					${__('Select an invoice to load summary data')}
 				</div>
 				<div class="invoice-summary-wrapper">
 					<div class="abs-container">
 						<div class="upper-section"></div>
-						<div class="label">Items</div>
+						<div class="label">${__('Items')}</div>
 						<div class="items-container summary-container"></div>
-						<div class="label">Totals</div>
+						<div class="label">${__('Totals')}</div>
 						<div class="totals-container summary-container"></div>
-						<div class="label">Payments</div>
+						<div class="label">${__('Payments')}</div>
 						<div class="payments-container summary-container"></div>
 						<div class="summary-btns"></div>
 					</div>
@@ -48,8 +48,8 @@ erpnext.PointOfSale.PastOrderSummary = class {
 		const email_dialog = new frappe.ui.Dialog({
 			title: 'Email Receipt',
 			fields: [
-				{fieldname: 'email_id', fieldtype: 'Data', options: 'Email', label: 'Email ID'},
-				// {fieldname:'remarks', fieldtype:'Text', label:'Remarks (if any)'}
+				{fieldname: 'email_id', fieldtype: 'Data', options: 'Email', label: 'Email ID', reqd: 1},
+				{fieldname:'content', fieldtype:'Small Text', label:'Message (if any)'}
 			],
 			primary_action: () => {
 				this.send_email();
@@ -82,7 +82,7 @@ erpnext.PointOfSale.PastOrderSummary = class {
 		return `<div class="left-section">
 					<div class="customer-name">${doc.customer}</div>
 					<div class="customer-email">${this.customer_email}</div>
-					<div class="cashier">Sold by: ${doc.owner}</div>
+					<div class="cashier">${__('Sold by')}: ${doc.owner}</div>
 				</div>
 				<div class="right-section">
 					<div class="paid-amount">${format_currency(doc.paid_amount, doc.currency)}</div>
@@ -94,7 +94,7 @@ erpnext.PointOfSale.PastOrderSummary = class {
 	get_item_html(doc, item_data) {
 		return `<div class="item-row-wrapper">
 					<div class="item-name">${item_data.item_name}</div>
-					<div class="item-qty">${item_data.qty || 0}</div>
+					<div class="item-qty">${item_data.qty || 0} ${item_data.uom}</div>
 					<div class="item-rate-disc">${get_rate_discount_html()}</div>
 				</div>`;
 
@@ -121,7 +121,7 @@ erpnext.PointOfSale.PastOrderSummary = class {
 
 	get_net_total_html(doc) {
 		return `<div class="summary-row-wrapper">
-					<div>Net Total</div>
+					<div>${__('Net Total')}</div>
 					<div>${format_currency(doc.net_total, doc.currency)}</div>
 				</div>`;
 	}
@@ -130,7 +130,8 @@ erpnext.PointOfSale.PastOrderSummary = class {
 		if (!doc.taxes.length) return '';
 
 		let taxes_html = doc.taxes.map(t => {
-			const description = /[0-9]+/.test(t.description) ? t.description : `${t.description} @ ${t.rate}%`;
+			// if tax rate is 0, don't print it.
+			const description = /[0-9]+/.test(t.description) ? t.description : ((t.rate != 0) ? `${t.description} @ ${t.rate}%`: t.description);
 			return `
 				<div class="tax-row">
 					<div class="tax-label">${description}</div>
@@ -144,14 +145,14 @@ erpnext.PointOfSale.PastOrderSummary = class {
 
 	get_grand_total_html(doc) {
 		return `<div class="summary-row-wrapper grand-total">
-					<div>Grand Total</div>
+					<div>${__('Grand Total')}</div>
 					<div>${format_currency(doc.grand_total, doc.currency)}</div>
 				</div>`;
 	}
 
 	get_payment_html(doc, payment) {
 		return `<div class="summary-row-wrapper payments">
-					<div>${payment.mode_of_payment}</div>
+					<div>${__(payment.mode_of_payment)}</div>
 					<div>${format_currency(payment.amount, doc.currency)}</div>
 				</div>`;
 	}
@@ -242,6 +243,7 @@ erpnext.PointOfSale.PastOrderSummary = class {
 	send_email() {
 		const frm = this.events.get_frm();
 		const recipients = this.email_dialog.get_values().email_id;
+		const content = this.email_dialog.get_values().content;
 		const doc = this.doc || frm.doc;
 		const print_format = frm.pos_print_format;
 
@@ -250,6 +252,7 @@ erpnext.PointOfSale.PastOrderSummary = class {
 			args: {
 				recipients: recipients,
 				subject: __(frm.meta.name) + ': ' + doc.name,
+				content: content ? content : __(frm.meta.name) + ': ' + doc.name,
 				doctype: doc.doctype,
 				name: doc.name,
 				send_email: 1,
@@ -285,8 +288,9 @@ erpnext.PointOfSale.PastOrderSummary = class {
 			if (m.condition) {
 				m.visible_btns.forEach(b => {
 					const class_name = b.split(' ')[0].toLowerCase();
+					const btn = __(b);
 					this.$summary_btns.append(
-						`<div class="summary-btn btn btn-default ${class_name}-btn">${b}</div>`
+						`<div class="summary-btn btn btn-default ${class_name}-btn">${btn}</div>`
 					);
 				});
 			}

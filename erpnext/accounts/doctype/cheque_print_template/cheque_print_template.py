@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
 
 import frappe
 from frappe import _
@@ -10,19 +8,57 @@ from frappe.model.document import Document
 
 
 class ChequePrintTemplate(Document):
+	# begin: auto-generated types
+	# This code is auto-generated. Do not modify anything in this block.
+
+	from typing import TYPE_CHECKING
+
+	if TYPE_CHECKING:
+		from frappe.types import DF
+
+		acc_no_dist_from_left_edge: DF.Float
+		acc_no_dist_from_top_edge: DF.Float
+		acc_pay_dist_from_left_edge: DF.Float
+		acc_pay_dist_from_top_edge: DF.Float
+		amt_in_figures_from_left_edge: DF.Float
+		amt_in_figures_from_top_edge: DF.Float
+		amt_in_word_width: DF.Float
+		amt_in_words_from_left_edge: DF.Float
+		amt_in_words_from_top_edge: DF.Float
+		amt_in_words_line_spacing: DF.Float
+		bank_name: DF.Data
+		cheque_height: DF.Float
+		cheque_size: DF.Literal["", "Regular", "A4"]
+		cheque_width: DF.Float
+		date_dist_from_left_edge: DF.Float
+		date_dist_from_top_edge: DF.Float
+		has_print_format: DF.Check
+		is_account_payable: DF.Check
+		message_to_show: DF.Data | None
+		payer_name_from_left_edge: DF.Float
+		payer_name_from_top_edge: DF.Float
+		scanned_cheque: DF.Attach | None
+		signatory_from_left_edge: DF.Float
+		signatory_from_top_edge: DF.Float
+		starting_position_from_top_edge: DF.Float
+	# end: auto-generated types
+
 	pass
+
 
 @frappe.whitelist()
 def create_or_update_cheque_print_format(template_name):
 	if not frappe.db.exists("Print Format", template_name):
 		cheque_print = frappe.new_doc("Print Format")
-		cheque_print.update({
-			"doc_type": "Payment Entry",
-			"standard": "No",
-			"custom_format": 1,
-			"print_format_type": "Jinja",
-			"name": template_name
-		})
+		cheque_print.update(
+			{
+				"doc_type": "Payment Entry",
+				"standard": "No",
+				"custom_format": 1,
+				"print_format_type": "Jinja",
+				"name": template_name,
+			}
+		)
 	else:
 		cheque_print = frappe.get_doc("Print Format", template_name)
 
@@ -71,10 +107,12 @@ def create_or_update_cheque_print_format(template_name):
 			{{doc.company}}
 		</span>
 	</div>
-</div>"""%{
-		"starting_position_from_top_edge": doc.starting_position_from_top_edge \
-			if doc.cheque_size == "A4" else 0.0,
-		"cheque_width": doc.cheque_width, "cheque_height": doc.cheque_height,
+</div>""" % {
+		"starting_position_from_top_edge": doc.starting_position_from_top_edge
+		if doc.cheque_size == "A4"
+		else 0.0,
+		"cheque_width": doc.cheque_width,
+		"cheque_height": doc.cheque_height,
 		"acc_pay_dist_from_top_edge": doc.acc_pay_dist_from_top_edge,
 		"acc_pay_dist_from_left_edge": doc.acc_pay_dist_from_left_edge,
 		"message_to_show": doc.message_to_show if doc.message_to_show else _("Account Pay Only"),
@@ -91,7 +129,7 @@ def create_or_update_cheque_print_format(template_name):
 		"amt_in_figures_from_top_edge": doc.amt_in_figures_from_top_edge,
 		"amt_in_figures_from_left_edge": doc.amt_in_figures_from_left_edge,
 		"signatory_from_top_edge": doc.signatory_from_top_edge,
-		"signatory_from_left_edge": doc.signatory_from_left_edge
+		"signatory_from_left_edge": doc.signatory_from_left_edge,
 	}
 
 	cheque_print.save(ignore_permissions=True)

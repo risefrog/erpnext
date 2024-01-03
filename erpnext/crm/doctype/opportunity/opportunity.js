@@ -1,10 +1,10 @@
 // Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
-
-{% include 'erpnext/selling/sales_common.js' %}
 frappe.provide("erpnext.crm");
+erpnext.pre_sales.set_as_lost("Opportunity");
+erpnext.sales_common.setup_selling_controller();
 
-cur_frm.email_field = "contact_email";
+
 frappe.ui.form.on("Opportunity", {
 	setup: function(frm) {
 		frm.custom_make_buttons = {
@@ -20,14 +20,13 @@ frappe.ui.form.on("Opportunity", {
 			}
 		});
 
-		if (frm.doc.opportunity_from && frm.doc.party_name){
-			frm.trigger('set_contact_link');
-		}
+		frm.email_field = "contact_email";
 	},
-	contact_date: function(frm) {
-		if(frm.doc.contact_date < frappe.datetime.now_datetime()){
-			frm.set_value("contact_date", "");
-			frappe.throw(__("Next follow up date should be greater than now."))
+
+	validate: function(frm) {
+		if (frm.doc.status == "Lost" && !frm.doc.lost_reasons.length) {
+			frm.trigger('set_as_lost_dialog');
+			frappe.throw(__("Lost Reasons are required in case opportunity is Lost."));
 		}
 	},
 
@@ -47,10 +46,6 @@ frappe.ui.form.on("Opportunity", {
 				frm: frm
 			});
 		}
-	},
-
-	onload_post_render: function(frm) {
-		frm.get_field("items").grid.set_multiple_add("item_code", "qty");
 	},
 
 	status:function(frm){
@@ -82,8 +77,8 @@ frappe.ui.form.on("Opportunity", {
 		frm.trigger('setup_opportunity_from');
 		erpnext.toggle_naming_series();
 
-		if(!doc.__islocal && doc.status!=="Lost") {
-			if(doc.with_items){
+		if(!frm.is_new() && doc.status!=="Lost") {
+			if(doc.items){
 				frm.add_custom_button(__('Supplier Quotation'),
 					function() {
 						frm.trigger("make_supplier_quotation")
@@ -122,6 +117,17 @@ frappe.ui.form.on("Opportunity", {
 				});
 			}
 		}
+
+		if (!frm.is_new()) {
+			frappe.contacts.render_address_and_contact(frm);
+			// frm.trigger('render_contact_day_html');
+		} else {
+			frappe.contacts.clear_address_and_contact(frm);
+		}
+
+		if (frm.doc.opportunity_from && frm.doc.party_name) {
+			frm.trigger('set_contact_link');
+		}
 	},
 
 	set_contact_link: function(frm) {
@@ -129,6 +135,8 @@ frappe.ui.form.on("Opportunity", {
 			frappe.dynamic_link = {doc: frm.doc, fieldname: 'party_name', doctype: 'Customer'}
 		} else if(frm.doc.opportunity_from == "Lead" && frm.doc.party_name) {
 			frappe.dynamic_link = {doc: frm.doc, fieldname: 'party_name', doctype: 'Lead'}
+		} else if (frm.doc.opportunity_from == "Prospect" && frm.doc.party_name) {
+			frappe.dynamic_link = {doc: frm.doc, fieldname: 'party_name', doctype: 'Prospect'}
 		}
 	},
 
@@ -187,11 +195,11 @@ frappe.ui.form.on("Opportunity", {
 
 	change_form_labels: function(frm) {
 		let company_currency = erpnext.get_currency(frm.doc.company);
-		frm.set_currency_labels(["base_opportunity_amount", "base_total", "base_grand_total"], company_currency);
-		frm.set_currency_labels(["opportunity_amount", "total", "grand_total"], frm.doc.currency);
+		frm.set_currency_labels(["base_opportunity_amount", "base_total"], company_currency);
+		frm.set_currency_labels(["opportunity_amount", "total"], frm.doc.currency);
 
 		// toggle fields
-		frm.toggle_display(["conversion_rate", "base_opportunity_amount", "base_total", "base_grand_total"],
+		frm.toggle_display(["conversion_rate", "base_opportunity_amount", "base_total"],
 			frm.doc.currency != company_currency);
 	},
 
@@ -209,23 +217,17 @@ frappe.ui.form.on("Opportunity", {
 	},
 
 	calculate_total: function(frm) {
-		let total = 0, base_total = 0, grand_total = 0, base_grand_total = 0;
+		let total = 0, base_total = 0;
 		frm.doc.items.forEach(item => {
 			total += item.amount;
 			base_total += item.base_amount;
 		})
 
-		base_grand_total = base_total + frm.doc.base_opportunity_amount;
-		grand_total = total + frm.doc.opportunity_amount;
-
 		frm.set_value({
 			'total': flt(total),
-			'base_total': flt(base_total),
-			'grand_total': flt(grand_total),
-			'base_grand_total': flt(base_grand_total)
+			'base_total': flt(base_total)
 		});
-	}
-
+	},
 });
 frappe.ui.form.on("Opportunity Item", {
 	calculate: function(frm, cdt, cdn) {
@@ -248,25 +250,26 @@ erpnext.crm.Opportunity = class Opportunity extends frappe.ui.form.Controller {
 	onload() {
 
 		if(!this.frm.doc.status) {
-			frm.set_value('status', 'Open');
+			this.frm.set_value('status', 'Open');
 		}
 		if(!this.frm.doc.company && frappe.defaults.get_user_default("Company")) {
-			frm.set_value('company', frappe.defaults.get_user_default("Company"));
+			this.frm.set_value('company', frappe.defaults.get_user_default("Company"));
 		}
 		if(!this.frm.doc.currency) {
-			frm.set_value('currency', frappe.defaults.get_user_default("Currency"));
+			this.frm.set_value('currency', frappe.defaults.get_user_default("Currency"));
 		}
 
 		this.setup_queries();
 		this.frm.trigger('currency');
 	}
 
+	refresh() {
+		this.show_notes();
+		this.show_activities();
+	}
+
 	setup_queries() {
 		var me = this;
-
-		if(this.frm.fields_dict.contact_by.df.options.match(/^User/)) {
-			this.frm.set_query("contact_by", erpnext.queries.user);
-		}
 
 		me.frm.set_query('customer_address', erpnext.queries.address_query);
 
@@ -284,6 +287,14 @@ erpnext.crm.Opportunity = class Opportunity extends frappe.ui.form.Controller {
 		}
 		else if (me.frm.doc.opportunity_from == "Customer") {
 			me.frm.set_query('party_name', erpnext.queries['customer']);
+		} else if (me.frm.doc.opportunity_from == "Prospect") {
+			me.frm.set_query('party_name', function() {
+				return {
+					filters: {
+						"company": me.frm.doc.company
+					}
+				};
+			});
 		}
 	}
 
@@ -299,6 +310,24 @@ erpnext.crm.Opportunity = class Opportunity extends frappe.ui.form.Controller {
 			method: "erpnext.crm.doctype.opportunity.opportunity.make_customer",
 			frm: cur_frm
 		})
+	}
+
+	show_notes() {
+		const crm_notes = new erpnext.utils.CRMNotes({
+			frm: this.frm,
+			notes_wrapper: $(this.frm.fields_dict.notes_html.wrapper),
+		});
+		crm_notes.refresh();
+	}
+
+	show_activities() {
+		const crm_activities = new erpnext.utils.CRMActivities({
+			frm: this.frm,
+			open_activities_wrapper: $(this.frm.fields_dict.open_activities_html.wrapper),
+			all_activities_wrapper: $(this.frm.fields_dict.all_activities_html.wrapper),
+			form_wrapper: $(this.frm.wrapper),
+		});
+		crm_activities.refresh();
 	}
 };
 
